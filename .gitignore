@@ -1,0 +1,6 @@
+.Rhistory
+.RData
+*.rds
+stan/inversion
+stan/*.exe
+.DS_Store
