@@ -1,0 +1,4 @@
+"quantity","posterior_1sigma","across_priors_range","across_transport_range_sd","across_background_sd"
+"Paper 1 box fossil share",0.076,"0.39-0.90",0.006,0.016
+"Observed-domain fossil share",0.054,"0.30-0.41",0.018,NA
+"DJ Basin fossil share",0.059,"0.29-0.39",0.007,0.017

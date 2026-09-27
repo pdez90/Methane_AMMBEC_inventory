@@ -1,0 +1,4 @@
+"region","prior_spread_log","post_spread_log","total_prior_dependence","post_spread_over_post_sigma","fossil_prior_range","fossil_post_range","fossil_prior_dependence"
+"Paper 1 box (urban)",1.197,0.301,0.25,1.56,"0.23-0.70","0.39-0.90",1.09
+"Observed domain",0.417,0.042,0.1,0.32,"0.38-0.42","0.30-0.41",NA
+"DJ Basin",0.315,0.131,0.42,0.92,"0.36-0.53","0.29-0.39",0.6

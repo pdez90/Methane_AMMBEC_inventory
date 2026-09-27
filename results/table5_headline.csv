@@ -1,0 +1,4 @@
+"region","n_members","total_median","total_range","total_90pct_members","fossil_share_median","fossil_share_range","fossil_share_excl_v11","biogenic_share_median"
+"Paper 1 box (urban)",12,"4.9","2.6-7.1","2.6-9.9","0.41","0.20-0.90","0.39 (0.20-0.43)","0.59"
+"Observed domain",12,"30.6","26.3-35.3","24.5-43.5","0.38","0.26-0.41","0.33 (0.26-0.39)","0.62"
+"DJ Basin",12,"21.9","17.3-26.9","15.8-33.5","0.29","0.28-0.42","0.34 (0.28-0.42)","0.71"
