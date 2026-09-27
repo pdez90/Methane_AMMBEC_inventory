@@ -47,7 +47,7 @@ fig1 <- function() {
   rect(b$lon_w, b$lat_s, b$lon_e, b$lat_n, border = "black", lwd = 1.6)
   points(FACILITIES$lon, FACILITIES$lat, pch = 24, bg = "white", cex = 1.1)
   text(FACILITIES$lon, FACILITIES$lat, c("DADS", "Tower Rd", "Metro"), pos = c(1, 3, 2), cex = 0.65, offset = 0.5)
-  legend("bottomright", c("urban", "urban edge", "basin", "Paper 1 box", "observed domain", "DJ Basin boundary (40.05 N)"), pch = c(16, 16, 16, NA, NA, NA), lty = c(NA, NA, NA, 1, 2, 3),
+  legend("topright", c("urban", "urban edge", "basin", "Paper 1 box", "observed domain", "DJ Basin boundary (40.05 N)"), pch = c(16, 16, 16, NA, NA, NA), lty = c(NA, NA, NA, 1, 2, 3),
          col = c(RCOL, "black", "grey40", "grey40"), pt.cex = 0.9, cex = 0.65, bg = "white", box.col = "grey70")
   panel_label("a")
   if (!is.null(g2)) {
@@ -209,12 +209,12 @@ fig6 <- function() {
     m <- rbind(s$fitted_signal, s$bg_shift, s$abs_leg); colnames(m) <- zs
     obs <- mean(s$obs_above_p05, na.rm = TRUE)
     bp <- barplot(m, beside = TRUE, col = SC, border = NA, las = 1, ylim = c(0, max(m, obs, na.rm = TRUE) * 1.25),
-                  xlab = "ZISCALE", ylab = "Urban CH4 above flight 5th percentile (ppb)", main = PRIOR_LAB[p], cex.main = 0.95)
+                  xlab = "ZISCALE", ylab = "Urban CH4 above flight 5th percentile (ppb, median over segments)", main = PRIOR_LAB[p], cex.main = 0.95)
     abline(h = obs, lty = 2, col = "black"); text(bp[1, 1], obs, sprintf("observed %.1f ppb", obs), adj = c(0, -0.4), cex = 0.7)
-    text(colMeans(bp), apply(m, 2, max), sprintf("signal %.0f%%", 100 * s$signal_share), pos = 3, cex = 0.7)
+    text(colMeans(bp), apply(m, 2, max), sprintf("%.0f%%", 100 * s$signal_share), pos = 3, cex = 0.7)
     xr <- range(bp[, zs %in% RANGE_ZI]); rect(xr[1] - 0.7, -1, xr[2] + 0.7, par("usr")[4], border = "grey40", lty = 3)
-    if (p == PRIORS[1]) legend("topleft", c("fitted emission signal", "background shift above p05", "|leg offset|", "observed enhancement"),
-                               fill = c(SC, NA), border = NA, lty = c(NA, NA, NA, 2), cex = 0.68, bg = "white", box.col = "grey70")
+    if (p == PRIORS[1]) legend("topleft", c("fitted emission signal", "background shift above p05", "|leg offset|", "observed enhancement", "% = sum(signal) / sum(observed) over urban segments"),
+                               fill = c(SC, NA, NA), border = NA, lty = c(NA, NA, NA, 2, NA), cex = 0.62, bg = "white", box.col = "grey70")
     panel_label(letters[match(p, PRIORS)])
   }
 }
