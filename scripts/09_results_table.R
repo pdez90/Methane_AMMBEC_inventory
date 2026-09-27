@@ -27,7 +27,7 @@ f1 <- function(x, d = 1) formatC(x, format = "f", digits = d)
 ci <- function(q50, q05, q95, d = 1) sprintf("%s [%s-%s]", f1(q50, d), f1(q05, d), f1(q95, d))
 lsd <- function(v) { v <- v[is.finite(v) & v > 0]; if (length(v) < 2) NA_real_ else sd(log(v)) }
 PRIOR_LAB <- c(epa_ghgi_2020 = "EPA GHGI 2020", gra2pes_v1.1 = "GRA2PES v1.1", gra2pes_v2.0beta = "GRA2PES v2.0b")
-REG_LAB <- c(paper1_box = "Paper 1 box (urban)", obs_box = "Observed domain", djb = "DJ Basin")
+REG_LAB <- c(paper1_box = "Metro box (urban)", obs_box = "Observed domain", djb = "DJ Basin")
 
 ## ---- gather every completed transport run ----------------------------------------------------------
 dirs <- list.dirs(runs_root, recursive = FALSE, full.names = FALSE)
@@ -106,7 +106,7 @@ budget <- function(reg, col, lab) {
     across_background_log_sd = round(bg_sd, 3), drift_over_base = round(bg_drift, 2),
     dominant = c("posterior", "prior", "transport", "background")[which.max(c(post_w, prior_sd, median(tr_range, na.rm = TRUE), ifelse(is.na(bg_sd), 0, bg_sd)))])
 }
-T4 <- rbind(budget("paper1_box", "E_q50", "Paper 1 box total"), budget("obs_box", "E_q50", "Observed-domain total"), budget("djb", "E_q50", "DJ Basin total"))
+T4 <- rbind(budget("paper1_box", "E_q50", "Metro box total"), budget("obs_box", "E_q50", "Observed-domain total"), budget("djb", "E_q50", "DJ Basin total"))
 # fossil shares: absolute spreads, not log
 fb <- function(reg, lab) { x <- RT[RT$config == CFG_MAIN & RT$region == reg, ]; a <- x[x$ziscale == MAIN_ZI, ]; r <- x[x$ziscale %in% RANGE_ZI, ]
   bgc <- c(paper1_box = "fossil_q50", obs_box = NA, djb = "djb_fossil_share")[reg]
@@ -114,7 +114,7 @@ fb <- function(reg, lab) { x <- RT[RT$config == CFG_MAIN & RT$region == reg, ]; 
     across_priors_range = sprintf("%.2f-%.2f", min(a$fossil_share_q50), max(a$fossil_share_q50)),
     across_transport_range_sd = round(median(sapply(split(r, r$prior), function(s) sd(s$fossil_share_q50))), 3),
     across_background_sd = if (!is.null(BG) && !is.na(bgc)) round(median(sapply(split(BG, BG$prior), function(s) sd(s[[bgc]]))), 3) else NA) }
-T4f <- rbind(fb("paper1_box", "Paper 1 box fossil share"), fb("obs_box", "Observed-domain fossil share"), fb("djb", "DJ Basin fossil share"))
+T4f <- rbind(fb("paper1_box", "Metro box fossil share"), fb("obs_box", "Observed-domain fossil share"), fb("djb", "DJ Basin fossil share"))
 write.csv(T4, file.path(OUT, "table4_budget_totals.csv"), row.names = FALSE); write.csv(T4f, file.path(OUT, "table4_budget_fossil.csv"), row.names = FALSE)
 
 ## ---- T5: headline ensemble ----------------------------------------------------------------------------

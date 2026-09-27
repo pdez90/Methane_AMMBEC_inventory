@@ -59,7 +59,13 @@ FOOT_DIR  <- env("METHANE_INV_FOOT", file.path(TRANSPORT_DIR, "footprints"))
 #   complex -> priors in INV_OUT,                  results in runs/<TRANSPORT>/
 #   wwtp    -> priors in INV_OUT/priors/metro_wwtp, results in runs/<TRANSPORT>/metro_wwtp/
 METRO_COMPONENT <- match.arg(Sys.getenv("METHANE_METRO_COMPONENT", "complex"), c("wwtp", "complex"))
-PRIOR_TAG <- if (METRO_COMPONENT == "complex") "" else "metro_wwtp"
+# Prior variants live in their own prior and run sub-directories (PRIOR_TAG). "metro_wwtp" is the
+# WWTP-resolved Metro component (08); "v11waste_*" gives GRA2PES v1.1 a waste sector it lacks (the
+# missing-sector test of the paper): METHANE_V11_WASTE = "epa" (v2.0beta waste pattern scaled to the EPA
+# GHGI waste total in the Paper 1 box) or "v2" (v2.0beta waste pattern and magnitude).
+V11_WASTE <- env("METHANE_V11_WASTE", "none")
+PRIOR_TAG <- env("METHANE_PRIOR_TAG", paste0(if (METRO_COMPONENT == "complex") "" else "metro_wwtp",
+                                             if (V11_WASTE != "none") paste0("v11waste_", V11_WASTE) else ""))
 PRIOR_DIR <- if (nzchar(PRIOR_TAG)) file.path(INV_OUT, "priors", PRIOR_TAG) else INV_OUT
 RUN_DIR   <- if (nzchar(PRIOR_TAG)) file.path(TRANSPORT_DIR, PRIOR_TAG) else TRANSPORT_DIR
 stopifnot(!startsWith(normalizePath(INV_OUT, mustWork = FALSE), "/Volumes/Elements"))

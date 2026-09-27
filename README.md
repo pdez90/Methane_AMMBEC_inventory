@@ -43,13 +43,22 @@ Git tags mark the code state behind each manuscript version (`v0.3-paper2`, …)
 | 6b | `scripts/06b_identifiability_regimes.R` | synthetic experiment: ethane contrast × noise × sampling density |
 | 7 | `scripts/07_invert.R` | the real inversion, all priors × tracer sets, at one transport setting; identifiability and prior dependence |
 | 7b | `scripts/07b_background_sensitivity.R` | nine background treatments at the central transport |
+| 12 | `scripts/12_endmember_sensitivity.R` | ethane endmember sensitivity: basin / urban ratios shifted, no contrast, sd halved / doubled, "other" as biogenic or as gas |
+| 13 | `scripts/13_predictive_checks.R` | posterior predictive checks by region and tracer; PSIS-LOO (package `loo`) / WAIC comparison of priors at the same tracer set; OSSE interval coverage |
+| 14 | `scripts/14_jackknife.R` | leave-one-flight-out jackknife standard errors of the totals and fossil shares |
 | 8 | `scripts/08_metro_wwtp.R` | Metro Water Recovery secondary analysis (SI S9); `METHANE_METRO_COMPONENT=wwtp` prior variant |
 | 9 | `scripts/09_results_table.R` | Tables 1–6 and `results_summary.md` from all runs |
+| 11 | `scripts/11_missing_sector.R` | three-way split fossil / biogenic / other (Table 8) and the missing-sector test: v1.1 with a waste sector added (`METHANE_V11_WASTE=epa|v2` runs of 04/05/07; Table 7) |
+| 10 | `scripts/10_figures.R` | Figures 1–6 |
 
 Transport sweep: `METHANE_ZISCALE` ∈ {0.37, 0.5, 0.8, 1.0, 1.2}, each a full 05 → 07 chain in
 `inversion_outputs/runs/np1000_h10[_ziX.XX]/`. 0.8 is the central run (aircraft profiles imply ≥ 0.78),
 0.8–1.0 the supported range, 0.37 and 1.2 bracketing failure cases (Section 3.4 of the paper).
 `METHANE_CORES=8` avoids a macOS fork error in the STILT step.
+
+Prior variants (`PRIOR_TAG`, own sub-directories under `priors/` and `runs/<transport>/`): `metro_wwtp` (08) and
+`v11waste_epa` / `v11waste_v2` (missing-sector test). `05c` also writes `blh_aircraft_km.csv`: the Kaplan–Meier
+(censoring-aware) distribution of the aircraft/HRRR mixed-layer-height ratio.
 
 ## Components (config.R)
 

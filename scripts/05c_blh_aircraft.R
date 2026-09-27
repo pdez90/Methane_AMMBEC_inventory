@@ -128,6 +128,24 @@ a <- D[!D$above_top & is.finite(D$hrrr_mlht), ]
 if (nrow(a) >= 3) { z <- median(a$zi_theta / a$hrrr_mlht)
   cat(sprintf("\nimplied ZISCALE (aircraft / HRRR, daytime, uncensored): %.2f   compare 05b lidar-based 0.37\n", z))
   cat("  Censored profiles mean the aircraft value is a lower bound: the true ZISCALE is at least this large where they dominate.\n") }
+# Censoring-aware estimate: treat aircraft/HRRR as right-censored at bound/HRRR for profiles whose mixed-layer
+# top lay above the profile, and estimate the distribution of the ratio with the Kaplan-Meier product-limit
+# estimator (daytime profiles with an HRRR match). This is what the uncensored median cannot give: the
+# population median and the probability that the ratio exceeds each candidate ZISCALE.
+r_all <- D[is.finite(D$hrrr_mlht) & (is.finite(D$zi_theta) | is.finite(D$zi_lower_bound)), ]
+if (nrow(r_all) >= 5) {
+  ratio <- ifelse(r_all$above_top, r_all$zi_lower_bound, r_all$zi_theta) / r_all$hrrr_mlht; event <- !r_all$above_top
+  o <- order(ratio); ratio <- ratio[o]; event <- event[o]; S <- 1; surv <- numeric(length(ratio)); at_risk <- length(ratio)
+  for (i in seq_along(ratio)) { if (event[i]) S <- S * (1 - 1 / at_risk); surv[i] <- S; at_risk <- at_risk - 1 }
+  km_q <- function(p) { i <- which(surv <= 1 - p)[1]; if (is.na(i)) NA else ratio[i] }
+  km_S <- function(x) { i <- which(ratio <= x); if (length(i)) surv[max(i)] else 1 }
+  cat(sprintf("\nKaplan-Meier (censoring-aware) aircraft / HRRR ratio, daytime, n = %d (%d resolved, %d censored):\n", nrow(r_all), sum(event), sum(!event)))
+  cat(sprintf("  median %.2f, IQR %.2f-%.2f\n", km_q(0.5), km_q(0.25), km_q(0.75)))
+  for (x in c(0.37, 0.5, 0.65, 0.8, 1.0, 1.2)) cat(sprintf("  P(ratio > %.2f) = %.2f\n", x, km_S(x)))
+  write.csv(data.frame(ziscale = c(0.37, 0.5, 0.65, 0.8, 1.0, 1.2), p_ratio_exceeds = sapply(c(0.37, 0.5, 0.65, 0.8, 1.0, 1.2), km_S),
+                       km_median = km_q(0.5), km_q25 = km_q(0.25), km_q75 = km_q(0.75), n = nrow(r_all), n_resolved = sum(event)),
+            file.path(REF_DIR, "blh_aircraft_km.csv"), row.names = FALSE)
+}
 sink()
 print(PR[, c("flight", "t_utc", "direction", "bottom_agl", "top_agl", "zi_theta", "zi_lower_bound", "zi_h2o", "lidar_blh", "hrrr_mlht")], row.names = FALSE)
 

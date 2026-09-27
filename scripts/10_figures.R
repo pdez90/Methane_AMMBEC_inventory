@@ -2,7 +2,7 @@
 #   Rscript scripts/10_figures.R            (after run_paper.R; env METHANE_MAIN_ZI=0.8 METHANE_RANGE_ZI=0.8,1.0)
 #   Out: <INV_OUT>/figures/paper2/fig{1..6}_*.png (300 dpi) and .pdf
 # Base graphics only. Every panel reads a CSV/RDS that 04–09 wrote; nothing is recomputed here.
-#   1  Map: receptors by region, Paper 1 box, observed domain, DJ Basin line, facilities; GRA2PES v2.0b prior
+#   1  Map: receptors by region, metro box, observed domain, DJ Basin line, facilities; GRA2PES v2.0b prior
 #   2  Prior vs posterior scaling factors by component and prior (CH4+C2H6), coloured by regime
 #   3  Transport sweep: totals and fossil shares vs ZISCALE, with the aircraft-profile constraint; aircraft vs HRRR MLH
 #   4  Identifiability: information gain and fossil-share sd by tracer set and prior; 06b regime map
@@ -47,7 +47,7 @@ fig1 <- function() {
   rect(b$lon_w, b$lat_s, b$lon_e, b$lat_n, border = "black", lwd = 1.6)
   points(FACILITIES$lon, FACILITIES$lat, pch = 24, bg = "white", cex = 1.1)
   text(FACILITIES$lon, FACILITIES$lat, c("DADS", "Tower Rd", "Metro"), pos = c(1, 3, 2), cex = 0.65, offset = 0.5)
-  legend("topright", c("urban", "urban edge", "basin", "Paper 1 box", "observed domain", "DJ Basin boundary (40.05 N)"), pch = c(16, 16, 16, NA, NA, NA), lty = c(NA, NA, NA, 1, 2, 3),
+  legend("topright", c("urban", "urban edge", "basin", "Denver metro box", "observed domain", "DJ Basin boundary (40.05 N)"), pch = c(16, 16, 16, NA, NA, NA), lty = c(NA, NA, NA, 1, 2, 3),
          col = c(RCOL, "black", "grey40", "grey40"), pt.cex = 0.9, cex = 0.65, bg = "white", box.col = "grey70")
   panel_label("a")
   if (!is.null(g2)) {
@@ -120,7 +120,7 @@ sweep_panel <- function(reg, col, ylab, main, share = FALSE, lab) {
 }
 fig3 <- function() {
   par(mfrow = c(2, 3), mar = c(4, 4.2, 2.5, 1), mgp = c(2.2, 0.7, 0))
-  sweep_panel("paper1_box", PCOL, expression("Emission (t CH"[4] ~ "h"^-1 * ")"), "Paper 1 box (urban)", FALSE, "a")
+  sweep_panel("paper1_box", PCOL, expression("Emission (t CH"[4] ~ "h"^-1 * ")"), "Metro box (urban)", FALSE, "a")
   legend("topleft", PRIOR_LAB, col = PCOL, lwd = 2, pch = 21, pt.bg = PCOL, cex = 0.7, bg = "white", box.col = "grey70")
   sweep_panel("obs_box", PCOL, expression("Emission (t CH"[4] ~ "h"^-1 * ")"), "Observed domain", FALSE, "b")
   sweep_panel("djb", PCOL, expression("Emission (t CH"[4] ~ "h"^-1 * ")"), "DJ Basin", FALSE, "c")
@@ -185,12 +185,12 @@ fig5 <- function() {
   CL <- c(base = "base (p05, sd 5 ppb, leg 3 ppb)", q01 = "1st percentile", q10 = "10th percentile", clean = "clean-air centre", sd2 = "prior sd 2 ppb", sd10 = "prior sd 10 ppb", leg1.5 = "leg scale 1.5 ppb", leg6 = "leg scale 6 ppb", drift = "within-flight drift")
   par(mfrow = c(1, 2), mar = c(4, 10, 2.5, 1), mgp = c(2.2, 0.7, 0))
   y0 <- rev(seq_along(cases)); off <- c(-0.22, 0, 0.22); names(off) <- PRIORS
-  plot(NA, xlim = c(0, max(BG$E_q95) * 1.05), ylim = c(0.5, length(cases) + 0.5), yaxt = "n", ylab = "", xlab = expression("Paper 1 box total (t CH"[4] ~ "h"^-1 * ")"), las = 1, main = "Urban total", cex.main = 0.95)
+  plot(NA, xlim = c(0, max(BG$E_q95) * 1.05), ylim = c(0.5, length(cases) + 0.5), yaxt = "n", ylab = "", xlab = expression("Metro box total (t CH"[4] ~ "h"^-1 * ")"), las = 1, main = "Urban total", cex.main = 0.95)
   axis(2, y0, CL[cases], las = 1, cex.axis = 0.75); abline(h = y0 + 0.5, col = "grey92")
   for (p in PRIORS) { s <- BG[BG$prior == p, ]; s <- s[match(cases, s$case), ]; yy <- y0 + off[p]
     segments(s$E_q05, yy, s$E_q95, yy, col = PCOL[p]); points(s$E_q50, yy, pch = 21, bg = PCOL[p], cex = 0.9) }
   legend("topright", PRIOR_LAB, pch = 21, pt.bg = PCOL, col = PCOL, cex = 0.7, bg = "white", box.col = "grey70"); panel_label("a")
-  plot(NA, xlim = c(0, 1), ylim = c(0.5, length(cases) + 0.5), yaxt = "n", ylab = "", xlab = "Paper 1 box fossil share", las = 1, main = "Urban fossil share", cex.main = 0.95)
+  plot(NA, xlim = c(0, 1), ylim = c(0.5, length(cases) + 0.5), yaxt = "n", ylab = "", xlab = "Metro box fossil share", las = 1, main = "Urban fossil share", cex.main = 0.95)
   axis(2, y0, CL[cases], las = 1, cex.axis = 0.75); abline(h = y0 + 0.5, col = "grey92")
   for (p in PRIORS) { s <- BG[BG$prior == p, ]; s <- s[match(cases, s$case), ]; points(s$fossil_q50, y0 + off[p], pch = 21, bg = PCOL[p], cex = 0.9) }
   panel_label("b")

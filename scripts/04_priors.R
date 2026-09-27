@@ -11,6 +11,7 @@
 #   EPA gridded GHGI 2020: 0.1-degree, time-invariant, molec cm-2 s-1 -> umol m-2 s-1; no CO.
 #
 #   Rscript scripts/04_priors.R [v1.1] [v2.0beta] [epa]      (default: all three)
+#   METHANE_V11_WASTE=epa Rscript scripts/04_priors.R v1.1    (missing-sector variant, written under priors/v11waste_epa/)
 #   Out: <PRIOR_DIR>/prior_<name>.rds, prior_box_totals.csv
 # ----------------------------------------------------------------------------------------------
 proj <- if (file.exists("config.R")) "." else ".."; source(file.path(proj, "config.R"))
@@ -76,6 +77,21 @@ build_gra2pes <- function(ver) {
   sec <- list()
   for (s in c("WASTE", "OG", "RES", "AG")) sec[[s]] <- gra_read(gra_files(file.path(sec_dir, s, MONTH), "weekdy"), "HC01", win)
   sec$TOTAL <- gra_read(gra_files(tot_ch4, "weekdy"), "HC01", win)
+  if (ver == "v1.1" && V11_WASTE != "none") {
+    # Missing-sector test: v1.1 carries no landfill / wastewater methane. Give it the v2.0beta WASTE field
+    # (same grid window), either as is ("v2") or scaled so that its Paper 1 box total equals the EPA GHGI
+    # waste total there ("epa"); the added mass is also added to TOTAL so "other" is unchanged.
+    w2 <- gra_read(gra_files(file.path(GRA2PES_DIR, "sectors", "v2.0beta", "WASTE", MONTH), "weekdy"), "HC01", win)
+    if (V11_WASTE == "epa") {
+      epa <- readRDS(file.path(INV_OUT, "prior_epa_ghgi_2020.rds"))          # the un-tagged EPA prior (04 default run)
+      epa_waste <- sum(epa$box_t_hr[c("dads", "tower_road", "metro_complex", "waste")])
+      g0 <- list(type = "lcc", x = win$x, y = win$y, lcc = win$lcc, lat = win$lat, lon = win$lon, hours = 0:23, comps = list(w = w2))
+      v2_waste <- component_box_t_hr(g0, grid_masks(g0))[["w"]]
+      w2 <- w2 * (epa_waste / v2_waste)
+      message(sprintf("v1.1 + waste (EPA magnitude): v2.0beta waste %.2f t/h in the box scaled to %.2f", v2_waste, epa_waste))
+    } else message("v1.1 + waste (v2.0beta magnitude)")
+    sec$WASTE <- sec$WASTE + w2; sec$TOTAL <- sec$TOTAL + w2
+  }
   g <- list(type = "lcc", x = win$x, y = win$y, lcc = win$lcc, lat = win$lat, lon = win$lon, hours = 0:23,
             meta = list(name = paste0("gra2pes_", ver), month = MONTH, units = "umol m-2 s-1"))
   masks <- grid_masks(g); g$comps <- make_components(sec, masks)
