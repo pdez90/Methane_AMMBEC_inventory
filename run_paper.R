@@ -11,6 +11,7 @@
 #   06   OSSE (realistic errors) and 06b identifiability regimes, at the central transport
 #   07b  background sensitivity (nine cases) at the central transport
 #   09   Tables 1–6 and results_summary.md
+#   10   Figures 1–6 (inversion_outputs/figures/paper2)
 #   08   Metro Water Recovery secondary analysis (SI S9); not needed for the main tables
 ZI     <- c("0.37", "0.5", "0.8", "1.0", "1.2")
 ZI_MAIN <- "0.8"
@@ -29,4 +30,5 @@ rs("06b_identifiability_regimes.R", c(METHANE_ZISCALE = ZI_MAIN))
 rs("07b_background_sensitivity.R", c(METHANE_ZISCALE = ZI_MAIN))
 rs("09_results_table.R", c(METHANE_MAIN_ZI = ZI_MAIN, METHANE_RANGE_ZI = "0.8,1.0"))
 if (isTRUE(as.logical(Sys.getenv("METHANE_RUN_WWTP", "FALSE")))) rs("08_metro_wwtp.R", c(METHANE_ZISCALE = ZI_MAIN))
+rs("10_figures.R", c(METHANE_MAIN_ZI = ZI_MAIN, METHANE_RANGE_ZI = "0.8,1.0"))
 cat("\nAll Paper 2 analyses complete. Tables are in inversion_outputs/results/.\n")

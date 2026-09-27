@@ -1,15 +1,15 @@
 # Computational environment (Paper 2)
 
-Recorded 2026-09-26 18:21 MDT on Priyankas-MBP-2 (aarch64-apple-darwin20).
+Recorded 2026-09-26 18:25 MDT on Priyankas-MBP-2 (aarch64-apple-darwin20).
 
 - R 4.5.0
-- CmdStan cmdstan not found ()
+- CmdStan 2.40.0 (/Users/priyanka/Methane_AMMBEC/cmdstan/cmdstan-2.40.0)
 - macOS / OS: Darwin 27.0.0
-- Cores used for STILT/Stan (METHANE_CORES): unset
+- Cores used for STILT/Stan (N_CORES): 15
 
 ## R packages
 
-- cmdstanr not installed
+- cmdstanr 0.9.0
 - posterior 1.6.1
 - ncdf4 1.24
 - parallel 4.5.0

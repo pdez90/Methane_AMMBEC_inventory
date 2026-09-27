@@ -2,6 +2,7 @@
 #   Rscript record_environment.R        (run on the machine that produced the manuscript numbers)
 # Complements renv.lock (renv::snapshot()) with a human-readable record for the paper's Data and Code
 # Availability statement.
+source("config.R"); suppressPackageStartupMessages(use_local_cmdstan())   # project Rlib and CmdStan, as the scripts use them
 pk <- c("cmdstanr", "posterior", "ncdf4", "parallel", "renv")
 ver <- function(p) tryCatch(as.character(packageVersion(p)), error = function(e) "not installed")
 cs <- tryCatch(cmdstanr::cmdstan_version(), error = function(e) "cmdstan not found")
@@ -13,7 +14,7 @@ lines <- c(
   sprintf("- R %s", getRversion()),
   sprintf("- CmdStan %s (%s)", cs, csp),
   sprintf("- macOS / OS: %s", paste(Sys.info()[c("sysname", "release")], collapse = " ")),
-  sprintf("- Cores used for STILT/Stan (METHANE_CORES): %s", Sys.getenv("METHANE_CORES", "unset")),
+  sprintf("- Cores used for STILT/Stan (N_CORES): %s", if (exists("N_CORES")) N_CORES else Sys.getenv("METHANE_CORES", "unset")),
   "", "## R packages", "",
   sprintf("- %s %s", pk, sapply(pk, ver)),
   "", "## Transport", "",
