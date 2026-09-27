@@ -6,6 +6,7 @@
 #       04/05/07, in runs/<transport>/v11waste_*/) against v1.1 as published. -> results/table7_missing_sector.csv
 #   Rscript scripts/11_missing_sector.R      (env METHANE_MAIN_ZI=0.8)
 proj <- if (file.exists("config.R")) "." else ".."; source(file.path(proj, "config.R"))
+suppressPackageStartupMessages(library(cmdstanr)); invisible(use_local_cmdstan())   # to read the saved fits
 MAIN_ZI <- as.numeric(Sys.getenv("METHANE_MAIN_ZI", "0.8")); MODEL <- Sys.getenv("METHANE_INV_MODEL", "v2"); CFG <- "ch4_c2h6"
 OUT <- file.path(INV_OUT, "results"); dir.create(OUT, FALSE, TRUE)
 runs_root <- file.path(INV_OUT, "runs")
@@ -16,22 +17,32 @@ FOSSIL_COMPONENTS <- c("og_basin", "og_urban", "postmeter")
 REG <- c(paper1_box = "Metro box (urban)", obs_box = "Observed domain", djb = "DJ Basin")
 BIO <- c("dads", "tower_road", "metro_complex", "metro_wwtp", "waste", "ag")
 
-## (A) three-way split: alpha (posterior median) x prior region total per component ----------------------------
-three_way <- function(alpha_csv, prior_region_csv, tag = "") {
-  A <- rd(alpha_csv); RT <- rd(prior_region_csv); if (is.null(A) || is.null(RT)) return(NULL)
-  A <- A[A$config == CFG, ]
-  do.call(rbind, lapply(unique(A$prior), function(p) do.call(rbind, lapply(names(REG), function(rg) {
-    a <- A[A$prior == p, ]; r <- RT[RT$prior == p, ]; e <- a$q50 * r[[rg]][match(a$component, r$component)]
-    e[is.na(e)] <- 0; tot <- sum(e); fos <- sum(e[a$component %in% c("og_basin", "og_urban", "postmeter")]); bio <- sum(e[a$component %in% BIO]); oth <- sum(e[a$component == "other"])
-    ro <- a$r_q50[a$component == "other"]
-    data.frame(variant = tag, prior = PRIOR_LAB[p], region = REG[rg], total_t_hr = round(tot, 1), fossil_t_hr = round(fos, 1), biogenic_t_hr = round(bio, 1), other_t_hr = round(oth, 1),
-               fossil_share = round(fos / tot, 2), biogenic_share = round(bio / tot, 2), other_share = round(oth / tot, 2),
-               fossil_share_if_other_fossil = round((fos + oth) / tot, 2), other_ethane_ratio_post = if (length(ro)) round(ro, 3) else NA)
-  }))))
+## (A) three-way split, computed WITHIN each posterior draw (alpha draws x prior region totals) --------------------
+# so that totals, shares and their intervals are summaries of the same draws as Table 1, not sums of medians.
+three_way <- function(fit_rds, prior_region_csv, prior_name, tag = "") {
+  RT <- rd(prior_region_csv); if (is.null(RT) || !file.exists(fit_rds)) return(NULL)
+  fit <- readRDS(fit_rds); A <- fit$draws("alpha", format = "draws_matrix"); Rr <- fit$draws("r", format = "draws_matrix")
+  K <- ncol(A)
+  J <- readRDS(sub("fit_.*$", paste0("jacobian_", prior_name, ".rds"), fit_rds))
+  seen <- J$components[colSums(J$H) > 1e-6 * sum(J$H)]     # 07 drops unseen columns before fitting; same rule, same order
+  if (length(seen) != K) stop("component mismatch for ", fit_rds)
+  r <- RT[RT$prior == prior_name, ]
+  do.call(rbind, lapply(names(REG), function(rg) {
+    w <- r[[rg]][match(seen, r$component)]; w[is.na(w)] <- 0
+    E <- A * matrix(w, nrow(A), K, byrow = TRUE)
+    Et <- rowSums(E); Ef <- rowSums(E[, seen %in% FOSSIL_COMPONENTS, drop = FALSE]); Eb <- rowSums(E[, seen %in% BIO, drop = FALSE]); Eo <- if ("other" %in% seen) E[, which(seen == "other")] else 0
+    q <- function(v, p) unname(quantile(v, p)); f1 <- function(v) sprintf("%.2f [%.2f-%.2f]", median(v), q(v, .05), q(v, .95))
+    ro <- if ("other" %in% seen) median(Rr[, which(seen == "other")]) else NA
+    data.frame(variant = tag, prior = PRIOR_LAB[prior_name], region = REG[rg],
+      total_t_hr = sprintf("%.1f [%.1f-%.1f]", median(Et), q(Et, .05), q(Et, .95)), fossil_t_hr = round(median(Ef), 1), biogenic_t_hr = round(median(Eb), 1), other_t_hr = round(median(Eo), 1),
+      fossil_share = f1(Ef / Et), biogenic_share = f1(Eb / Et), other_share = f1(Eo / Et),
+      fossil_share_if_other_fossil = f1((Ef + Eo) / Et), other_ethane_ratio_post = round(ro, 3))
+  }))
 }
-T8 <- three_way(file.path(main_dir, paste0("posterior_alpha_", MODEL, ".csv")), file.path(INV_OUT, "prior_region_totals.csv"), "main")
+fit_of <- function(dir, p) file.path(dir, sprintf("fit_%s_%s_%s.rds", p, CFG, MODEL))
+T8 <- do.call(rbind, lapply(names(PRIOR_LAB), function(p) three_way(fit_of(main_dir, p), file.path(INV_OUT, "prior_region_totals.csv"), p, "main")))
 if (!is.null(T8)) { write.csv(T8, file.path(OUT, "table8_three_way_split.csv"), row.names = FALSE)
-  cat("\nThree-way split (fossil / biogenic / other) at ZISCALE", MAIN_ZI, "-- posterior medians x prior region totals:\n"); print(T8[, -1], row.names = FALSE) }
+  cat("\nThree-way split (fossil / biogenic / other), within-draw, at ZISCALE", MAIN_ZI, ":\n"); print(T8[, -1], row.names = FALSE) }
 
 ## (B) missing-sector test --------------------------------------------------------------------------------------
 rows <- list()
@@ -51,7 +62,7 @@ for (v in c("epa", "v2")) {
     post_box_t_hr = sprintf("%.1f [%.1f-%.1f]", b$E_q50, b$E_q05, b$E_q95), post_fossil_share = sprintf("%.2f [%.2f-%.2f]", b$fossil_share_q50, b$fossil_share_q05, b$fossil_share_q95),
     alpha_postmeter = round(ba$q50[ba$component == "postmeter"], 1), alpha_waste_components = paste(sprintf("%s %.2f", wa$component, wa$q50), collapse = "; "),
     domain_fossil_share = round(x$fossil_share_q50[x$prior == "gra2pes_v1.1" & x$config == CFG & x$region == "obs_box"], 2))
-  T8v <- three_way(file.path(d, paste0("posterior_alpha_", MODEL, ".csv")), file.path(INV_OUT, "priors", paste0("v11waste_", v), "prior_region_totals.csv"), paste0("v11waste_", v))
+  T8v <- three_way(fit_of(d, "gra2pes_v1.1"), file.path(INV_OUT, "priors", paste0("v11waste_", v), "prior_region_totals.csv"), "gra2pes_v1.1", paste0("v11waste_", v))
   if (!is.null(T8v)) write.csv(T8v, file.path(OUT, sprintf("table8_three_way_split_v11waste_%s.csv", v)), row.names = FALSE)
 }
 if (length(rows)) { T7 <- do.call(rbind, rows); write.csv(T7, file.path(OUT, "table7_missing_sector.csv"), row.names = FALSE)

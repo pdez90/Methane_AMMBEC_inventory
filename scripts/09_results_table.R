@@ -12,12 +12,12 @@
 #   T5  headline ensemble: priors x transport {0.8, 1.0} x background {base, drift}: median and range
 #
 #   Rscript scripts/09_results_table.R            (main transport 0.8, range 0.8-1.0; override with
-#   METHANE_MAIN_ZI=0.8 METHANE_RANGE_ZI=0.8,1.0)
+#   METHANE_MAIN_ZI=0.8 METHANE_RANGE_ZI=0.8,1.0,1.2)   (the range is the Kaplan-Meier IQR of the aircraft/HRRR ratio, 05c)
 #   Out: <INV_OUT>/results/table*.csv, results_summary.md
 # ----------------------------------------------------------------------------------------------------
 proj <- if (file.exists("config.R")) "." else ".."; source(file.path(proj, "config.R"))
 MAIN_ZI  <- as.numeric(Sys.getenv("METHANE_MAIN_ZI", "0.8"))
-RANGE_ZI <- as.numeric(strsplit(Sys.getenv("METHANE_RANGE_ZI", "0.8,1.0"), ",")[[1]])
+RANGE_ZI <- as.numeric(strsplit(Sys.getenv("METHANE_RANGE_ZI", "0.8,1.0,1.2"), ",")[[1]])
 MODEL <- Sys.getenv("METHANE_INV_MODEL", "v2"); CFG_MAIN <- "ch4_c2h6"
 OUT <- file.path(INV_OUT, "results"); dir.create(OUT, FALSE, TRUE)
 runs_root <- file.path(INV_OUT, "runs")

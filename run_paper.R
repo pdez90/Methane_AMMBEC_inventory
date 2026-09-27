@@ -36,11 +36,11 @@ rs("07b_background_sensitivity.R", c(METHANE_ZISCALE = ZI_MAIN))
 rs("12_endmember_sensitivity.R", c(METHANE_ZISCALE = ZI_MAIN))
 rs("13_predictive_checks.R", c(METHANE_ZISCALE = ZI_MAIN))
 if (isTRUE(as.logical(Sys.getenv("METHANE_RUN_JACKKNIFE", "TRUE")))) rs("14_jackknife.R", c(METHANE_ZISCALE = ZI_MAIN))   # ~1 h
-rs("09_results_table.R", c(METHANE_MAIN_ZI = ZI_MAIN, METHANE_RANGE_ZI = "0.8,1.0"))
+rs("09_results_table.R", c(METHANE_MAIN_ZI = ZI_MAIN, METHANE_RANGE_ZI = "0.8,1.0,1.2"))
 if (isTRUE(as.logical(Sys.getenv("METHANE_RUN_WWTP", "FALSE")))) rs("08_metro_wwtp.R", c(METHANE_ZISCALE = ZI_MAIN))
 # Missing-sector test: GRA2PES v1.1 given a waste sector (two magnitudes), central transport only
 for (v in c("epa", "v2")) { e <- c(METHANE_V11_WASTE = v, METHANE_ZISCALE = ZI_MAIN)
   rs("04_priors.R v1.1", e); rs("05_jacobian.R", e); rs("07_invert.R", e) }
 rs("11_missing_sector.R", c(METHANE_MAIN_ZI = ZI_MAIN))
-rs("10_figures.R", c(METHANE_MAIN_ZI = ZI_MAIN, METHANE_RANGE_ZI = "0.8,1.0"))
+rs("10_figures.R", c(METHANE_MAIN_ZI = ZI_MAIN, METHANE_RANGE_ZI = "0.8,1.0,1.2"))
 cat("\nAll Paper 2 analyses complete. Tables are in inversion_outputs/results/.\n")

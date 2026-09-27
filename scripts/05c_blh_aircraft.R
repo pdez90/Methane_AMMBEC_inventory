@@ -142,8 +142,21 @@ if (nrow(r_all) >= 5) {
   cat(sprintf("\nKaplan-Meier (censoring-aware) aircraft / HRRR ratio, daytime, n = %d (%d resolved, %d censored):\n", nrow(r_all), sum(event), sum(!event)))
   cat(sprintf("  median %.2f, IQR %.2f-%.2f\n", km_q(0.5), km_q(0.25), km_q(0.75)))
   for (x in c(0.37, 0.5, 0.65, 0.8, 1.0, 1.2)) cat(sprintf("  P(ratio > %.2f) = %.2f\n", x, km_S(x)))
-  write.csv(data.frame(ziscale = c(0.37, 0.5, 0.65, 0.8, 1.0, 1.2), p_ratio_exceeds = sapply(c(0.37, 0.5, 0.65, 0.8, 1.0, 1.2), km_S),
-                       km_median = km_q(0.5), km_q25 = km_q(0.25), km_q75 = km_q(0.75), n = nrow(r_all), n_resolved = sum(event)),
+  # Bootstrap (profiles resampled with replacement, 2000 draws) for the uncertainty of the KM median, quartiles and
+  # exceedance fractions. These describe the DISTRIBUTION of the profile ratio; they are not a test of a single
+  # scaling factor. KM assumes the censoring value (profile top / HRRR) is independent of the true ratio, which
+  # holds only approximately here because both share the HRRR denominator: stated as an assumption in the paper.
+  km_fit <- function(rt, ev) { o <- order(rt); rt <- rt[o]; ev <- ev[o]; S <- 1; sv <- numeric(length(rt)); ar <- length(rt)
+    for (i in seq_along(rt)) { if (ev[i]) S <- S * (1 - 1 / ar); sv[i] <- S; ar <- ar - 1 }
+    list(q = function(p) { i <- which(sv <= 1 - p)[1]; if (is.na(i)) NA else rt[i] }, S = function(x) { i <- which(rt <= x); if (length(i)) sv[max(i)] else 1 }) }
+  set.seed(1); B <- 2000; xs <- c(0.37, 0.5, 0.65, 0.8, 1.0, 1.2)
+  bs <- t(replicate(B, { i <- sample(length(ratio), replace = TRUE); k <- km_fit(ratio[i], event[i]); c(k$q(0.5), k$q(0.25), k$q(0.75), sapply(xs, k$S)) }))
+  ci <- apply(bs, 2, quantile, c(0.025, 0.975), na.rm = TRUE)
+  cat(sprintf("  bootstrap 95%% CI: median %.2f-%.2f, q25 %.2f-%.2f, q75 %.2f-%.2f\n", ci[1, 1], ci[2, 1], ci[1, 2], ci[2, 2], ci[1, 3], ci[2, 3]))
+  for (j in seq_along(xs)) cat(sprintf("  P(ratio > %.2f): 95%% CI %.2f-%.2f\n", xs[j], ci[1, 3 + j], ci[2, 3 + j]))
+  write.csv(data.frame(ziscale = xs, p_ratio_exceeds = sapply(xs, km_S), p_lo95 = ci[1, 4:9], p_hi95 = ci[2, 4:9],
+                       km_median = km_q(0.5), km_median_lo95 = ci[1, 1], km_median_hi95 = ci[2, 1], km_q25 = km_q(0.25), km_q75 = km_q(0.75),
+                       n = nrow(r_all), n_resolved = sum(event)),
             file.path(REF_DIR, "blh_aircraft_km.csv"), row.names = FALSE)
 }
 sink()

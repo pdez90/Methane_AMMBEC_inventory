@@ -12,23 +12,29 @@ proj <- if (file.exists("config.R")) "." else ".."; source(file.path(proj, "conf
 source(file.path(proj, "R", "inversion.R"))
 N_DRAWS <- as.integer(Sys.getenv("METHANE_PPC_DRAWS", "400"))
 S0 <- read.csv(file.path(INV_OUT, "obs_segments.csv"), stringsAsFactors = FALSE)
-fits <- list.files(RUN_DIR, pattern = sprintf("^fit_.*_%s\\.rds$", INV_MODEL))
+# main run plus the prior variants that live in sub-directories (v11waste_epa, v11waste_v2, metro_wwtp): each is a
+# separate source representation and is compared on the same data
+DIRS <- c(main = RUN_DIR, setNames(list.dirs(RUN_DIR, recursive = FALSE), basename(list.dirs(RUN_DIR, recursive = FALSE))))
+DIRS <- DIRS[names(DIRS) %in% c("main", "v11waste_epa", "v11waste_v2", "metro_wwtp")]
+fits <- unlist(lapply(names(DIRS), function(v) { f <- list.files(DIRS[[v]], pattern = sprintf("^fit_.*_%s\\.rds$", INV_MODEL)); if (length(f)) paste(v, f, sep = "|") else NULL }))
 if (!length(fits)) stop("no fit_*_", INV_MODEL, ".rds in ", RUN_DIR)
 has_loo <- requireNamespace("loo", quietly = TRUE)
 if (!has_loo) cat("package 'loo' not installed: reporting WAIC only (install.packages('loo') for PSIS-LOO)\n")
 lse <- function(v) { m <- max(v); m + log(mean(exp(v - m))) }
 dt_ll <- function(y, mu, sc, nu) dt((y - mu) / sc, df = nu, log = TRUE) - log(sc)
 PC <- list(); MC <- list()
-for (f in fits) {
+LL <- list()
+for (f0 in fits) {
+  v <- sub("\\|.*$", "", f0); f <- sub("^.*\\|", "", f0); RD <- DIRS[[v]]
   m <- regmatches(f, regexec(sprintf("^fit_(.*)_(ch4(?:_c2h6)?(?:_co)?)_%s\\.rds$", INV_MODEL), f, perl = TRUE))[[1]]
   if (!length(m)) next
-  pr <- m[2]; cf <- m[3]; use <- list(ch4 = character(0), ch4_c2h6 = "c2h6", ch4_c2h6_co = c("c2h6", "co"))[[cf]]
-  J <- readRDS(file.path(RUN_DIR, paste0("jacobian_", pr, ".rds")))
+  pr <- if (v == "main") m[2] else paste0(m[2], "+", sub("^v11waste_", "waste_", v)); cf <- m[3]; use <- list(ch4 = character(0), ch4_c2h6 = "c2h6", ch4_c2h6_co = c("c2h6", "co"))[[cf]]
+  J <- readRDS(file.path(RD, paste0("jacobian_", m[2], ".rds")))
   S <- S0[match(J$ids, S0$id), ]; S$leg_key <- paste(S$flight, S$leg_id)
   seen <- colSums(J$H) > 1e-6 * sum(J$H)
   J$H <- J$H[, seen, drop = FALSE]; K <- J$components <- J$components[seen]; J$box_t_hr <- J$box_t_hr[K]
   sd <- make_stan_data(S, J, use = use)
-  fit <- readRDS(file.path(RUN_DIR, f))
+  fit <- readRDS(file.path(RD, f))
   D <- fit$draws(c("alpha", "r", "tau", "b_ch4_z", "b_c2h6_z", "sl_ch4", "sl_c2h6", "u_ch4_z", "u_c2h6_z", "s_ch4", "s_c2h6", "phi"), format = "draws_matrix")
   if (nrow(D) > N_DRAWS) D <- D[round(seq(1, nrow(D), length.out = N_DRAWS)), , drop = FALSE]
   D <- unclass(D); attr(D, "nchains") <- NULL                       # plain matrix: column subsets drop to vectors
@@ -60,7 +66,8 @@ for (f in fits) {
   }
   # (B) elpd
   lppd <- sum(apply(ll, 2, lse)); p_waic <- sum(apply(ll, 2, var)); elpd_waic <- lppd - p_waic
-  row <- data.frame(prior = pr, config = cf, n_obs = ncol(ll), n_ch4 = sd$N, n_c2h6 = sd$N_c2h6, lppd = round(lppd, 1), p_waic = round(p_waic, 1), elpd_waic = round(elpd_waic, 1),
+  LL[[paste(pr, cf)]] <- ll
+  row <- data.frame(prior = pr, config = cf, n_tracer_obs = ncol(ll), n_ch4 = sd$N, n_c2h6 = sd$N_c2h6, lppd = round(lppd, 1), p_waic = round(p_waic, 1), elpd_waic = round(elpd_waic, 1),
                     elpd_loo = NA, se_elpd_loo = NA, p_loo = NA, pareto_k_gt_0.7 = NA)
   if (has_loo) { lo <- tryCatch(loo::loo(ll, r_eff = NA), error = function(e) NULL)
     if (!is.null(lo)) { row$elpd_loo <- round(lo$estimates["elpd_loo", "Estimate"], 1); row$se_elpd_loo <- round(lo$estimates["elpd_loo", "SE"], 1)
@@ -71,9 +78,17 @@ for (f in fits) {
 PC <- do.call(rbind, PC); MC <- do.call(rbind, MC)
 write.csv(PC, inv_file("predictive_checks.csv"), row.names = FALSE); write.csv(MC, inv_file("model_comparison.csv"), row.names = FALSE)
 cat("\nposterior predictive checks (urban segments):\n"); print(PC[PC$region == "urban", ], row.names = FALSE)
-cat("\nmodel comparison within each tracer set (elpd relative to the best prior; same data within a set):\n")
+cat("\nmodel comparison within each tracer set (same tracer observations within a set; units = CH4 + C2H6 [+ CO excluded] segment observations):\n")
+CMP <- list()
 for (cf in unique(MC$config)) { m <- MC[MC$config == cf, ]; e <- if (all(!is.na(m$elpd_loo))) m$elpd_loo else m$elpd_waic
-  cat(sprintf("  %-12s %s\n", cf, paste(sprintf("%s %+.1f", m$prior, e - max(e)), collapse = " | "))) }
+  cat(sprintf("  %-12s %s\n", cf, paste(sprintf("%s %+.1f", m$prior, e - max(e)), collapse = " | ")))
+  if (has_loo && nrow(m) >= 2) {   # paired elpd differences with their standard error (loo_compare)
+    lo <- lapply(m$prior, function(p) tryCatch(loo::loo(LL[[paste(p, cf)]], r_eff = NA), error = function(e) NULL)); names(lo) <- m$prior
+    lo <- lo[!vapply(lo, is.null, NA)]
+    if (length(lo) >= 2) { cc <- loo::loo_compare(lo); cc <- as.data.frame(cc[, c("elpd_diff", "se_diff")]); cc$prior <- rownames(cc); cc$config <- cf
+      CMP[[cf]] <- cc; cat("    paired LOO differences (elpd_diff +- se_diff, vs the best):\n"); for (i in seq_len(nrow(cc))) cat(sprintf("      %-22s %+7.1f +- %.1f\n", cc$prior[i], cc$elpd_diff[i], cc$se_diff[i])) } }
+}
+if (length(CMP)) write.csv(do.call(rbind, CMP), inv_file("model_comparison_paired.csv"), row.names = FALSE)
 
 ## (C) OSSE coverage --------------------------------------------------------------------------------------------
 of <- file.path(TRANSPORT_DIR, sprintf("osse_region_totals_%s.csv", INV_MODEL))

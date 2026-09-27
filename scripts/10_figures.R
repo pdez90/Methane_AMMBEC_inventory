@@ -10,7 +10,7 @@
 #   6  Decomposition of the observed urban enhancement by transport setting (signal / background / leg / residual)
 proj <- if (file.exists("config.R")) "." else ".."; source(file.path(proj, "config.R")); source(file.path(proj, "R", "grids.R"))
 MAIN_ZI  <- as.numeric(Sys.getenv("METHANE_MAIN_ZI", "0.8"))
-RANGE_ZI <- as.numeric(strsplit(Sys.getenv("METHANE_RANGE_ZI", "0.8,1.0"), ",")[[1]])
+RANGE_ZI <- as.numeric(strsplit(Sys.getenv("METHANE_RANGE_ZI", "0.8,1.0,1.2"), ",")[[1]])
 MODEL <- Sys.getenv("METHANE_INV_MODEL", "v2"); CFG_MAIN <- "ch4_c2h6"
 FIG <- file.path(INV_OUT, "figures", "paper2"); dir.create(FIG, FALSE, TRUE)
 runs_root <- file.path(INV_OUT, "runs")
@@ -105,13 +105,14 @@ RT <- do.call(rbind, lapply(dirs, function(d) { r <- rd(runs_root, d, paste0("po
 RT <- RT[RT$config == CFG_MAIN, ]
 BLH <- rd(runs_root, base_dir, "blh_aircraft_profiles.csv")
 blh_txt <- file.path(runs_root, base_dir, "blh_aircraft_summary.txt")
-blh_zi <- if (file.exists(blh_txt)) { l <- grep("implied ZISCALE", readLines(blh_txt), value = TRUE); if (length(l)) as.numeric(sub(".*uncensored\\): *([0-9.]+).*", "\\1", l[1])) else NA } else NA
+KM <- rd(runs_root, base_dir, "blh_aircraft_km.csv"); blh_zi <- if (!is.null(KM)) KM$km_median[1] else NA
+km_iqr <- if (!is.null(KM)) c(KM$km_q25[1], KM$km_q75[1]) else c(NA, NA)
 sweep_panel <- function(reg, col, ylab, main, share = FALSE, lab) {
   x <- RT[RT$region == reg, ]; zs <- sort(unique(x$ziscale))
   yr <- if (share) c(0, 1) else c(0, max(x[[if (share) "fossil_share_q95" else "E_q95"]]) * 1.05)
   plot(NA, xlim = c(0.3, 1.25), ylim = yr, xlab = "Mixed-layer height scaling (ZISCALE)", ylab = ylab, las = 1, main = main, cex.main = 0.95)
-  rect(min(RANGE_ZI), yr[1] - 1, max(RANGE_ZI), yr[2] * 2, col = adjustcolor("grey80", 0.5), border = NA)
-  if (is.finite(blh_zi)) { abline(v = blh_zi, lty = 2, col = "grey30"); text(blh_zi, yr[2] * 0.98, sprintf("aircraft >= %.2f", blh_zi), adj = c(-0.05, 1), cex = 0.65, col = "grey30") }
+  if (all(is.finite(km_iqr))) rect(km_iqr[1], yr[1] - 1, km_iqr[2], yr[2] * 2, col = adjustcolor("grey80", 0.5), border = NA)
+  if (is.finite(blh_zi)) { abline(v = blh_zi, lty = 2, col = "grey30"); text(blh_zi, yr[2] * 0.98, sprintf("aircraft/HRRR median %.2f (IQR shaded)", blh_zi), adj = c(-0.05, 1), cex = 0.6, col = "grey30") }
   for (p in PRIORS) { s <- x[x$prior == p, ]; s <- s[order(s$ziscale), ]
     if (share) { lines(s$ziscale, s$fossil_share_q50, col = PCOL[p], lwd = 2); arrows(s$ziscale, s$fossil_share_q05, s$ziscale, s$fossil_share_q95, angle = 90, code = 3, length = 0.02, col = PCOL[p]) }
     else { lines(s$ziscale, s$E_q50, col = PCOL[p], lwd = 2); arrows(s$ziscale, s$E_q05, s$ziscale, s$E_q95, angle = 90, code = 3, length = 0.02, col = PCOL[p]) }
@@ -136,7 +137,7 @@ fig3 <- function() {
     arrows(cen$hrrr_mlht, cen$zi_lower_bound, cen$hrrr_mlht, cen$zi_lower_bound + 0.06 * lim[2], length = 0.04, col = "grey40")
     abline(0, 1, col = "grey50"); if (is.finite(blh_zi)) abline(0, blh_zi, lty = 2, col = "grey30")
     if (any(!is.na(unc$lidar_blh))) points(unc$hrrr_mlht, unc$lidar_blh, pch = 4, col = "#D55E00")
-    legend("topleft", c(sprintf("resolved top (n = %d)", nrow(unc)), sprintf("lower bound, top above profile (n = %d)", nrow(cen)), "lidar at same time", "1:1", if (is.finite(blh_zi)) sprintf("slope %.2f", blh_zi)),
+    legend("topleft", c(sprintf("resolved top (n = %d)", nrow(unc)), sprintf("lower bound, top above profile (n = %d)", nrow(cen)), "lidar at same time", "1:1", if (is.finite(blh_zi)) sprintf("Kaplan-Meier median %.2f", blh_zi)),
            pch = c(21, 24, 4, NA, NA), pt.bg = c("#0072B2", "white", NA, NA, NA), col = c("black", "black", "#D55E00", "grey50", "grey30"), lty = c(NA, NA, NA, 1, 2), cex = 0.62, bg = "white", box.col = "grey70")
     panel_label("f")
   }
