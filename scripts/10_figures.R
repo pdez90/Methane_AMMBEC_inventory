@@ -112,7 +112,7 @@ sweep_panel <- function(reg, col, ylab, main, share = FALSE, lab) {
   yr <- if (share) c(0, 1) else c(0, max(x[[if (share) "fossil_share_q95" else "E_q95"]]) * 1.05)
   plot(NA, xlim = c(0.3, 1.25), ylim = yr, xlab = "Mixed-layer height scaling (ZISCALE)", ylab = ylab, las = 1, main = main, cex.main = 0.95)
   if (all(is.finite(km_iqr))) rect(km_iqr[1], yr[1] - 1, km_iqr[2], yr[2] * 2, col = adjustcolor("grey80", 0.5), border = NA)
-  if (is.finite(blh_zi)) { abline(v = blh_zi, lty = 2, col = "grey30"); text(blh_zi, yr[2] * 0.98, sprintf("aircraft/HRRR median %.2f (IQR shaded)", blh_zi), adj = c(-0.05, 1), cex = 0.6, col = "grey30") }
+  if (is.finite(blh_zi)) { abline(v = blh_zi, lty = 2, col = "grey30"); text(blh_zi, yr[2] * 0.98, sprintf("profile ratio: median %.2f, IQR shaded", blh_zi), adj = c(1.05, 1), cex = 0.6, col = "grey30") }
   for (p in PRIORS) { s <- x[x$prior == p, ]; s <- s[order(s$ziscale), ]
     if (share) { lines(s$ziscale, s$fossil_share_q50, col = PCOL[p], lwd = 2); arrows(s$ziscale, s$fossil_share_q05, s$ziscale, s$fossil_share_q95, angle = 90, code = 3, length = 0.02, col = PCOL[p]) }
     else { lines(s$ziscale, s$E_q50, col = PCOL[p], lwd = 2); arrows(s$ziscale, s$E_q05, s$ziscale, s$E_q95, angle = 90, code = 3, length = 0.02, col = PCOL[p]) }
