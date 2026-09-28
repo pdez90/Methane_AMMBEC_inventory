@@ -129,6 +129,7 @@ fig3 <- function() {
   sweep_panel("djb", PCOL, "Fossil share", "DJ Basin", TRUE, "e")
   # (f) aircraft vs HRRR mixed-layer height
   if (!is.null(BLH)) {
+    BLH <- BLH[BLH$hour_mdt >= 10 & BLH$hour_mdt <= 17, ]   # daytime 10-17 MDT: the same profiles as the Kaplan-Meier analysis in 05c
     unc <- BLH[!is.na(BLH$zi_theta) & !is.na(BLH$hrrr_mlht), ]; cen <- BLH[is.na(BLH$zi_theta) & !is.na(BLH$zi_lower_bound) & !is.na(BLH$hrrr_mlht), ]
     lim <- c(0, max(c(unc$zi_theta, unc$hrrr_mlht, cen$zi_lower_bound, cen$hrrr_mlht), na.rm = TRUE) * 1.05)
     plot(unc$hrrr_mlht, unc$zi_theta, xlim = lim, ylim = lim, pch = 21, bg = "#0072B2", xlab = "HRRR mixed-layer height (m AGL)",
